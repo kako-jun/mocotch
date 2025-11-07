@@ -69,9 +69,14 @@ backend/
 │   ├── models.py         # Pydanticモデル
 │   ├── git_service.py    # Git操作サービス
 │   └── rpg_service.py    # RPGデータ管理サービス
+├── templates/            # ゲームプロジェクトテンプレート
+│   ├── game-project-README.md   # README テンプレート
+│   └── game-project-gitignore   # .gitignore テンプレート
 ├── projects/             # RPGプロジェクト（gitignore対象）
 │   └── {project-name}/   # 各プロジェクトのリポジトリ
 │       ├── game.json     # ゲームデータ
+│       ├── README.md     # プロジェクト説明（自動生成）
+│       ├── .gitignore    # Git除外設定（自動生成）
 │       ├── .mocotch.json # メタデータ（gitignore対象）
 │       └── assets/       # アセットファイル
 │           ├── images/

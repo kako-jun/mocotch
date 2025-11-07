@@ -6,10 +6,11 @@
 
 **Mocotch**: ドラクエ風RPGの制作・実行ツール
 
-- エディットモード: マップエディタでRPGワールドを作成（今後実装予定）
+- エディットモード: マップ、NPC、プレイヤー、アセットを編集するビジュアルエディタ
 - プレイモード: Phaserでゲーム実行
 - Git管理: ゲームデータとアセットをGitで自動バージョン管理
 - プロジェクト管理: 各RPGゲームは独立したGitリポジトリとして管理
+- データ駆動設計: MainSceneはgame.jsonから動的にゲームを構築
 
 ## プロジェクト構造（モノレポ）
 
@@ -17,11 +18,14 @@
 mocotch/
 ├── src/                    # フロントエンド (React + Vite + TypeScript)
 │   ├── components/        # UIコンポーネント
-│   │   ├── PhaserGame.tsx      # Phaserゲームコンポーネント
-│   │   └── SaveDiscardButtons.tsx # セーブ/破棄ボタン
+│   │   ├── PhaserGame.tsx          # Phaserゲームコンポーネント
+│   │   ├── SaveDiscardButtons.tsx  # セーブ/破棄ボタン
+│   │   ├── MapEditor.tsx           # マップエディタ（タイル配置）
+│   │   └── NPCEditor.tsx           # NPCエディタ（NPC配置・設定）
 │   ├── screens/           # 画面コンポーネント
-│   │   ├── ProjectListScreen.tsx # プロジェクト一覧
-│   │   └── EditorScreen.tsx      # エディタ画面
+│   │   ├── ProjectListScreen.tsx   # プロジェクト一覧
+│   │   ├── EditorScreen.tsx        # エディタ画面（Edit/Play切替）
+│   │   └── AssetsScreen.tsx        # アセット管理画面
 │   ├── game/              # Phaserゲーム
 │   │   ├── MainScene.ts        # ゲームメインシーン
 │   │   └── config.ts           # Phaser設定
@@ -34,6 +38,9 @@ mocotch/
 │   │   ├── models.py           # Pydanticモデル
 │   │   ├── git_service.py      # Git操作
 │   │   └── rpg_service.py      # RPGデータ管理
+│   ├── templates/              # ゲームプロジェクトテンプレート
+│   │   ├── game-project-README.md  # README テンプレート
+│   │   └── game-project-gitignore  # .gitignore テンプレート
 │   ├── projects/               # ゲームプロジェクト（gitignore対象）
 │   │   └── {game-name}/        # 各ゲームのリポジトリ
 │   ├── pyproject.toml          # uv用依存関係
@@ -126,12 +133,14 @@ curl -X POST http://localhost:8000/api/projects/init \
 ```
 
 これで以下が自動生成されます：
-- Git リポジトリ
+- Git リポジトリ（developブランチ）
 - game.json（ゲームデータ）
 - .mocotch.json（メタデータ、gitignore対象）
-- assets/images/
-- assets/sounds/
-- assets/movies/
+- .gitignore（.mocotch.jsonを除外）
+- README.md（プロジェクト説明とゲームデータフォーマット）
+- assets/images/（画像フォルダ）
+- assets/sounds/（音声フォルダ）
+- assets/movies/（動画フォルダ）
 
 ### 既存ゲームのクローン
 
@@ -159,8 +168,9 @@ curl -X POST http://localhost:8000/api/projects/clone \
 my-rpg-game/
 ├── .git/
 ├── .gitignore          # .mocotch.jsonを除外
-├── .mocotch.json       # ローカル設定（ブランチ情報）
-├── game.json           # ゲームデータ
+├── .mocotch.json       # ローカル設定（ブランチ情報、gitignore対象）
+├── README.md           # プロジェクト説明（自動生成）
+├── game.json           # ゲームデータ（マップ、NPC、プレイヤー）
 └── assets/
     ├── images/         # 画像ファイル
     ├── sounds/         # 音声ファイル
@@ -207,16 +217,34 @@ my-rpg-game/
 ## モード切り替え
 
 ### エディットモード
-- マップエディタでタイル配置（今後実装予定）
-- NPC配置エディタ（今後実装予定）
-- イベント設定（今後実装予定）
+
+エディット画面ではタブで以下を切り替えて編集：
+
+1. **マップ** - タイル配置エディタ
+   - タイルパレット（草地、道、木、水）
+   - クリック/ドラッグで描画
+   - ビジュアルマップエディタ
+
+2. **NPC** - NPC配置・設定エディタ
+   - NPCリスト管理
+   - マップ上での配置（クリックで配置）
+   - 名前、メッセージ、色の設定
+
+3. **プレイヤー** - プレイヤー初期設定
+   - 初期位置（X, Y座標）
+   - 初期方向（上下左右）
+
+4. **アセット →** - アセット管理画面へ遷移
+   - 画像、音声、動画のアップロード/削除
+   - ファイルプレビュー
+   - 検索機能
 
 ### プレイモード
 - Phaserでゲーム実行
-- 既存のMainSceneを使用
+- game.jsonから動的に読み込み
 - ドラクエ風の操作感
 
-右下のボタンでモード切り替え可能。
+右下の「▶️」ボタンでプレイモードに切り替え。
 
 ## 保存の仕組み
 
@@ -289,27 +317,32 @@ npm run format
 
 ## 現在の実装状況
 
-### 完了
+### 完了 ✅
 - ✅ バックエンドAPI実装完了
-- ✅ プロジェクト管理機能完成
-- ✅ RPGデータ管理機能完成
-- ✅ アセット管理機能完成
-- ✅ Git統合機能完成（自動保存、コミット、プッシュ）
+- ✅ プロジェクト管理機能（初期化、クローン、同期）
+- ✅ RPGデータ管理機能（CRUD操作）
+- ✅ アセット管理機能（アップロード、ダウンロード、削除）
+- ✅ Git統合機能（自動保存、コミット、プッシュ、破棄）
 - ✅ フロントエンドとバックエンドの統合
 - ✅ プロジェクト一覧画面
 - ✅ エディタ画面（Edit/Playモード切り替え）
+- ✅ **マップエディタ**（タイル配置UI、ドラッグ描画）
+- ✅ **NPCエディタ**（NPC配置・設定UI）
+- ✅ **プレイヤー設定UI**（初期位置・方向）
+- ✅ **アセット管理画面**（画像/音声/動画、プレビュー、検索）
+- ✅ **MainSceneデータ駆動化**（game.jsonから動的に読み込み）
+- ✅ **ゲームプロジェクトテンプレート**（README.md、.gitignore）
 - ✅ プレイモード（Phaserゲーム実行）
 - ✅ ダークモード対応
 - ✅ Docker Compose設定
 
 ### 未実装（今後の予定）
-- ⬜ マップエディタ（タイル配置UI）
-- ⬜ NPC配置エディタ
-- ⬜ イベント設定UI
-- ⬜ アセット管理画面（images, sounds, movies）
-- ⬜ MainSceneをデータ駆動型に変更（game.jsonからデータを読み込む）
+- ⬜ イベント設定UI（マップイベント、トリガー設定）
 - ⬜ タグ機能（アセット分類）
+- ⬜ マップレイヤー機能（地形レイヤー、オブジェクトレイヤー）
 - ⬜ 本番環境へのデプロイ設定
+- ⬜ カスタムタイル画像のサポート
+- ⬜ 音声・動画のゲーム内再生機能
 
 ## ゲームの操作方法
 

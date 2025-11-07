@@ -1,11 +1,17 @@
 """RPGプロジェクトデータを管理するサービス"""
 import json
+import shutil
 from pathlib import Path
 from typing import Optional, Dict, Any
 import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+# テンプレートファイルのパス
+TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
+README_TEMPLATE = TEMPLATES_DIR / "game-project-README.md"
+GITIGNORE_TEMPLATE = TEMPLATES_DIR / "game-project-gitignore"
 
 
 class RPGService:
@@ -94,10 +100,30 @@ class RPGService:
             with open(self.meta_file, 'w', encoding='utf-8') as f:
                 json.dump(meta_data, f, ensure_ascii=False, indent=2)
 
-            # .gitignoreを作成
+            # .gitignoreをテンプレートからコピー
             gitignore_path = self.project_path / ".gitignore"
-            with open(gitignore_path, 'w') as f:
-                f.write(".mocotch.json\n")
+            if GITIGNORE_TEMPLATE.exists():
+                shutil.copy(GITIGNORE_TEMPLATE, gitignore_path)
+            else:
+                # フォールバック
+                with open(gitignore_path, 'w') as f:
+                    f.write(".mocotch.json\n")
+
+            # README.mdをテンプレートからコピーして変数を置換
+            readme_path = self.project_path / "README.md"
+            if README_TEMPLATE.exists():
+                with open(README_TEMPLATE, 'r', encoding='utf-8') as f:
+                    readme_content = f.read()
+
+                # テンプレート変数を置換
+                readme_content = readme_content.replace("{project_name}", project_name)
+                readme_content = readme_content.replace("{created_date}", datetime.now().strftime("%Y-%m-%d"))
+                readme_content = readme_content.replace("{mocotch_version}", "1.0.0")
+
+                with open(readme_path, 'w', encoding='utf-8') as f:
+                    f.write(readme_content)
+            else:
+                logger.warning("README テンプレートが見つかりません")
 
             logger.info(f"デフォルトプロジェクト作成完了: {project_name}")
             return True

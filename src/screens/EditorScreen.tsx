@@ -1,7 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import SaveDiscardButtons from '../components/SaveDiscardButtons'
 import PhaserGame from '../components/PhaserGame'
+import MapEditor from '../components/MapEditor'
+import NPCEditor from '../components/NPCEditor'
 import { Mode, RPGProject } from '../types'
+
+type EditorTab = 'map' | 'npc' | 'player' | 'assets'
 
 interface EditorScreenProps {
   projectName: string
@@ -21,12 +26,14 @@ function EditorScreen({
   onOpenSettings,
 }: EditorScreenProps) {
   const [mode, setMode] = useState<Mode>('edit')
+  const [editorTab, setEditorTab] = useState<EditorTab>('map')
   const [projectData, setProjectData] = useState<RPGProject | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const saveTimeoutRef = useRef<number | null>(null)
   const initialDataRef = useRef<string>('')
+  const navigate = useNavigate()
 
   // 初回ロード: APIからゲームデータを取得
   useEffect(() => {
@@ -130,6 +137,17 @@ function EditorScreen({
     }
   }
 
+  // アセット画面を開く
+  const handleOpenAssets = () => {
+    navigate(`/${projectName}/assets`)
+  }
+
+  // プロジェクトデータの更新
+  const handleUpdateProjectData = (updater: (data: RPGProject) => RPGProject) => {
+    if (!projectData) return
+    setProjectData(updater(projectData))
+  }
+
   if (!projectData) {
     return (
       <div className={`flex items-center justify-center h-screen ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
@@ -179,23 +197,166 @@ function EditorScreen({
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-hidden flex flex-col">
         {mode === 'edit' ? (
-          <div className={`h-full flex items-center justify-center ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-            <div className="text-center">
-              <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                エディットモード
-              </h2>
-              <p className={`mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                マップエディタは今後実装予定です
-              </p>
-              <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                右下の「▶️」ボタンでゲームをプレイできます
-              </p>
+          <>
+            {/* エディタタブ */}
+            <div className={`border-b ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+              <div className="px-6 py-3 flex gap-2">
+                <button
+                  onClick={() => setEditorTab('map')}
+                  className={`px-4 py-2 rounded font-medium transition-colors ${
+                    editorTab === 'map'
+                      ? isDark
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-500 text-white'
+                      : isDark
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  マップ
+                </button>
+                <button
+                  onClick={() => setEditorTab('npc')}
+                  className={`px-4 py-2 rounded font-medium transition-colors ${
+                    editorTab === 'npc'
+                      ? isDark
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-500 text-white'
+                      : isDark
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  NPC
+                </button>
+                <button
+                  onClick={() => setEditorTab('player')}
+                  className={`px-4 py-2 rounded font-medium transition-colors ${
+                    editorTab === 'player'
+                      ? isDark
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-500 text-white'
+                      : isDark
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  プレイヤー
+                </button>
+                <button
+                  onClick={handleOpenAssets}
+                  className={`px-4 py-2 rounded font-medium transition-colors ${
+                    isDark
+                      ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  アセット →
+                </button>
+              </div>
             </div>
-          </div>
+
+            {/* エディタコンテンツ */}
+            <div className={`flex-1 overflow-auto ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+              {editorTab === 'map' && (
+                <MapEditor
+                  mapData={projectData.map}
+                  isDark={isDark}
+                  onChange={newMapData => {
+                    handleUpdateProjectData(data => ({
+                      ...data,
+                      map: newMapData,
+                    }))
+                  }}
+                />
+              )}
+              {editorTab === 'npc' && (
+                <NPCEditor
+                  npcs={projectData.npcs}
+                  mapData={projectData.map}
+                  isDark={isDark}
+                  onChange={newNPCs => {
+                    handleUpdateProjectData(data => ({
+                      ...data,
+                      npcs: newNPCs,
+                    }))
+                  }}
+                />
+              )}
+              {editorTab === 'player' && (
+                <div className={`p-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <h2 className="text-xl font-bold mb-4">プレイヤー設定</h2>
+                  <div className="space-y-4 max-w-md">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        初期位置 X
+                      </label>
+                      <input
+                        type="number"
+                        value={projectData.player.x}
+                        onChange={e => {
+                          const x = parseInt(e.target.value) || 0
+                          handleUpdateProjectData(data => ({
+                            ...data,
+                            player: { ...data.player, x },
+                          }))
+                        }}
+                        className={`w-full px-3 py-2 border rounded ${
+                          isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        初期位置 Y
+                      </label>
+                      <input
+                        type="number"
+                        value={projectData.player.y}
+                        onChange={e => {
+                          const y = parseInt(e.target.value) || 0
+                          handleUpdateProjectData(data => ({
+                            ...data,
+                            player: { ...data.player, y },
+                          }))
+                        }}
+                        className={`w-full px-3 py-2 border rounded ${
+                          isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        初期方向
+                      </label>
+                      <select
+                        value={projectData.player.direction}
+                        onChange={e => {
+                          const direction = e.target.value as 'up' | 'down' | 'left' | 'right'
+                          handleUpdateProjectData(data => ({
+                            ...data,
+                            player: { ...data.player, direction },
+                          }))
+                        }}
+                        className={`w-full px-3 py-2 border rounded ${
+                          isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        <option value="up">上</option>
+                        <option value="down">下</option>
+                        <option value="left">左</option>
+                        <option value="right">右</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
-          <PhaserGame />
+          <PhaserGame gameData={projectData || undefined} />
         )}
       </main>
 

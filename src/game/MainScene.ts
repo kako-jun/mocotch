@@ -1,10 +1,12 @@
 import Phaser from 'phaser'
+import { RPGProject, NPCData } from '../types'
 
 interface NPC {
   sprite: Phaser.GameObjects.Rectangle
   x: number
   y: number
   message: string
+  data: NPCData
 }
 
 export class MainScene extends Phaser.Scene {
@@ -14,7 +16,7 @@ export class MainScene extends Phaser.Scene {
   private actionKey?: Phaser.Input.Keyboard.Key
   private playerGridX = 5
   private playerGridY = 5
-  private readonly tileSize = 32
+  private tileSize = 32
   private readonly moveSpeed = 150
   private isMoving = false
   private playerDirection = 'down'
@@ -36,8 +38,27 @@ export class MainScene extends Phaser.Scene {
   private movePath: { x: number; y: number }[] = []
   private targetNPC: NPC | null = null
 
+  // ゲームデータ
+  private gameData?: RPGProject
+
   constructor() {
     super({ key: 'MainScene' })
+  }
+
+  init(data: { gameData: RPGProject }) {
+    // ゲームデータを受け取る
+    this.gameData = data.gameData
+
+    if (this.gameData) {
+      // マップデータを設定
+      this.mapData = this.gameData.map.tiles
+      this.tileSize = this.gameData.map.tileSize
+
+      // プレイヤー初期位置を設定
+      this.playerGridX = this.gameData.player.x
+      this.playerGridY = this.gameData.player.y
+      this.playerDirection = this.gameData.player.direction
+    }
   }
 
   preload() {
@@ -45,85 +66,11 @@ export class MainScene extends Phaser.Scene {
   }
 
   create() {
-    // マップデータを作成（0: 草地, 1: 道, 2: 木, 3: 水）
-    this.mapData = [
-      [
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 3, 3, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 3, 3, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 3, 3, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        2,
-      ],
-      [
-        2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-        2,
-      ],
-    ]
+    // ゲームデータがない場合はデフォルトマップを使用
+    if (!this.gameData) {
+      console.warn('ゲームデータが見つかりません。デフォルトマップを使用します。')
+      this.mapData = this.getDefaultMapData()
+    }
 
     // 背景色
     this.cameras.main.setBackgroundColor('#1a4d1a')
@@ -153,9 +100,7 @@ export class MainScene extends Phaser.Scene {
 
     // キーボード入力
     this.cursors = this.input.keyboard?.createCursorKeys()
-    this.actionKey = this.input.keyboard?.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE
-    )
+    this.actionKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
 
     // タッチ/クリック入力
     this.input.on('pointerdown', this.handlePointerDown, this)
@@ -211,26 +156,22 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createNPCs() {
-    const npcData = [
-      { x: 4, y: 3, message: 'ようこそ、この世界へ！' },
-      { x: 10, y: 7, message: '東の方に池があるぞ。' },
-      { x: 6, y: 9, message: 'いい天気だね。' },
-      { x: 15, y: 5, message: '冒険の準備はできたかい？' },
-    ]
+    if (!this.gameData) return
 
-    npcData.forEach(data => {
-      const x = data.x * this.tileSize + this.tileSize / 2
-      const y = data.y * this.tileSize + this.tileSize / 2
+    this.gameData.npcs.forEach(npcData => {
+      const x = npcData.x * this.tileSize + this.tileSize / 2
+      const y = npcData.y * this.tileSize + this.tileSize / 2
 
-      const sprite = this.add.rectangle(x, y, 28, 28, 0xff6b6b)
+      const sprite = this.add.rectangle(x, y, 28, 28, npcData.color)
       sprite.setStrokeStyle(2, 0x8b0000)
       sprite.setDepth(5)
 
       this.npcs.push({
         sprite,
-        x: data.x,
-        y: data.y,
-        message: data.message,
+        x: npcData.x,
+        y: npcData.y,
+        message: npcData.message,
+        data: npcData,
       })
     })
   }
@@ -489,8 +430,7 @@ export class MainScene extends Phaser.Scene {
     }
 
     // BFS（幅優先探索）で経路探索
-    const queue: { x: number; y: number; path: { x: number; y: number }[] }[] =
-      []
+    const queue: { x: number; y: number; path: { x: number; y: number }[] }[] = []
     const visited = new Set<string>()
 
     queue.push({ x: startX, y: startY, path: [] })
@@ -551,12 +491,7 @@ export class MainScene extends Phaser.Scene {
       const targetY = npc.y + dir.dy
 
       if (this.canMoveTo(targetX, targetY)) {
-        const path = this.findPath(
-          this.playerGridX,
-          this.playerGridY,
-          targetX,
-          targetY
-        )
+        const path = this.findPath(this.playerGridX, this.playerGridY, targetX, targetY)
         if (path && path.length < shortestLength) {
           shortestPath = path
           shortestLength = path.length
@@ -609,5 +544,29 @@ export class MainScene extends Phaser.Scene {
         }
       },
     })
+  }
+
+  private getDefaultMapData(): number[][] {
+    return [
+      [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 3, 3, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 3, 3, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3, 3, 3, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+      [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    ]
   }
 }
