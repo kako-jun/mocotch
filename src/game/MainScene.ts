@@ -32,6 +32,10 @@ export class MainScene extends Phaser.Scene {
   private mapData: number[][] = []
   private npcs: NPC[] = []
 
+  // タッチ/クリック操作
+  private movePath: { x: number; y: number }[] = []
+  private targetNPC: NPC | null = null
+
   constructor() {
     super({ key: 'MainScene' })
   }
@@ -138,7 +142,7 @@ export class MainScene extends Phaser.Scene {
 
     // 操作説明
     this.add
-      .text(10, 10, '矢印キー: 移動 / スペース: 話す', {
+      .text(10, 10, '操作: タップで移動 / NPCをタップで会話', {
         fontSize: '14px',
         color: '#ffffff',
         backgroundColor: '#000000',
@@ -152,6 +156,9 @@ export class MainScene extends Phaser.Scene {
     this.actionKey = this.input.keyboard?.addKey(
       Phaser.Input.Keyboard.KeyCodes.SPACE
     )
+
+    // タッチ/クリック入力
+    this.input.on('pointerdown', this.handlePointerDown, this)
 
     // カメラ設定
     const mapWidth = this.mapData[0].length * this.tileSize
@@ -408,6 +415,12 @@ export class MainScene extends Phaser.Scene {
       return
     }
 
+    // 自動移動パスがある場合
+    if (this.movePath.length > 0 && !this.isMoving) {
+      this.processMovePath()
+      return
+    }
+
     // アクションキー
     if (Phaser.Input.Keyboard.JustDown(this.actionKey!)) {
       this.checkNPCInteraction()
@@ -417,7 +430,7 @@ export class MainScene extends Phaser.Scene {
     // 移動中は入力を受け付けない
     if (this.isMoving) return
 
-    // 移動処理
+    // キーボード移動処理
     if (this.cursors.up.isDown) {
       this.movePlayer('up')
     } else if (this.cursors.down.isDown) {
@@ -427,5 +440,174 @@ export class MainScene extends Phaser.Scene {
     } else if (this.cursors.right.isDown) {
       this.movePlayer('right')
     }
+  }
+
+  private handlePointerDown(pointer: Phaser.Input.Pointer) {
+    // テキスト表示中はタップでテキストを進める
+    if (this.isShowingText) {
+      this.hideText()
+      return
+    }
+
+    // ワールド座標に変換
+    const worldX = pointer.worldX
+    const worldY = pointer.worldY
+
+    // グリッド座標に変換
+    const gridX = Math.floor(worldX / this.tileSize)
+    const gridY = Math.floor(worldY / this.tileSize)
+
+    // NPCをタップしたかチェック
+    const tappedNPC = this.npcs.find(npc => npc.x === gridX && npc.y === gridY)
+    if (tappedNPC) {
+      // NPCの隣まで移動するパスを探索
+      const path = this.findPathToNPC(tappedNPC)
+      if (path) {
+        this.movePath = path
+        this.targetNPC = tappedNPC
+      }
+      return
+    }
+
+    // タップした場所まで移動するパスを探索
+    const path = this.findPath(this.playerGridX, this.playerGridY, gridX, gridY)
+    if (path && path.length > 0) {
+      this.movePath = path
+      this.targetNPC = null
+    }
+  }
+
+  private findPath(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
+  ): { x: number; y: number }[] | null {
+    // 目的地が通行不可の場合
+    if (!this.canMoveTo(endX, endY)) {
+      return null
+    }
+
+    // BFS（幅優先探索）で経路探索
+    const queue: { x: number; y: number; path: { x: number; y: number }[] }[] =
+      []
+    const visited = new Set<string>()
+
+    queue.push({ x: startX, y: startY, path: [] })
+    visited.add(`${startX},${startY}`)
+
+    const directions = [
+      { dx: 0, dy: -1 }, // up
+      { dx: 0, dy: 1 }, // down
+      { dx: -1, dy: 0 }, // left
+      { dx: 1, dy: 0 }, // right
+    ]
+
+    while (queue.length > 0) {
+      const current = queue.shift()!
+
+      if (current.x === endX && current.y === endY) {
+        return current.path
+      }
+
+      for (const dir of directions) {
+        const nextX = current.x + dir.dx
+        const nextY = current.y + dir.dy
+        const key = `${nextX},${nextY}`
+
+        if (!visited.has(key) && this.canMoveTo(nextX, nextY)) {
+          visited.add(key)
+          queue.push({
+            x: nextX,
+            y: nextY,
+            path: [...current.path, { x: nextX, y: nextY }],
+          })
+        }
+      }
+
+      // 経路が長すぎる場合は中断（パフォーマンス対策）
+      if (visited.size > 200) {
+        return null
+      }
+    }
+
+    return null
+  }
+
+  private findPathToNPC(npc: NPC): { x: number; y: number }[] | null {
+    // NPCの隣接するタイルを探す
+    const directions = [
+      { dx: 0, dy: -1 }, // up
+      { dx: 0, dy: 1 }, // down
+      { dx: -1, dy: 0 }, // left
+      { dx: 1, dy: 0 }, // right
+    ]
+
+    let shortestPath: { x: number; y: number }[] | null = null
+    let shortestLength = Infinity
+
+    for (const dir of directions) {
+      const targetX = npc.x + dir.dx
+      const targetY = npc.y + dir.dy
+
+      if (this.canMoveTo(targetX, targetY)) {
+        const path = this.findPath(
+          this.playerGridX,
+          this.playerGridY,
+          targetX,
+          targetY
+        )
+        if (path && path.length < shortestLength) {
+          shortestPath = path
+          shortestLength = path.length
+        }
+      }
+    }
+
+    return shortestPath
+  }
+
+  private processMovePath() {
+    if (this.movePath.length === 0) return
+
+    const nextPos = this.movePath[0]
+
+    // 次の位置への方向を決定
+    const dx = nextPos.x - this.playerGridX
+    const dy = nextPos.y - this.playerGridY
+
+    let direction = 'down'
+    if (dy < 0) direction = 'up'
+    else if (dy > 0) direction = 'down'
+    else if (dx < 0) direction = 'left'
+    else if (dx > 0) direction = 'right'
+
+    // 移動を実行
+    this.playerDirection = direction
+    this.playerGridX = nextPos.x
+    this.playerGridY = nextPos.y
+
+    const targetX = nextPos.x * this.tileSize + this.tileSize / 2
+    const targetY = nextPos.y * this.tileSize + this.tileSize / 2
+
+    this.isMoving = true
+
+    this.tweens.add({
+      targets: this.player,
+      x: targetX,
+      y: targetY,
+      duration: this.moveSpeed,
+      ease: 'Linear',
+      onComplete: () => {
+        this.isMoving = false
+        this.movePath.shift()
+
+        // パスの最後に到達し、対象NPCがいる場合は会話
+        if (this.movePath.length === 0 && this.targetNPC) {
+          this.showText(this.targetNPC.message)
+          this.targetNPC = null
+        }
+      },
+    })
   }
 }

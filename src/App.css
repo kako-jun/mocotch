@@ -55,3 +55,26 @@ button:focus-visible {
     color: #213547;
   }
 }
+
+@media (max-width: 768px) {
+  .App {
+    padding: 0.5rem;
+  }
+
+  .App-header {
+    margin-bottom: 1rem;
+  }
+
+  .App-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .start-screen {
+    padding: 2rem 1rem;
+    gap: 1.5rem;
+  }
+
+  .start-screen p {
+    font-size: 1rem;
+  }
+}
