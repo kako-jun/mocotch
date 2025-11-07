@@ -1,28 +1,352 @@
-# CLAUDE.md
+# Mocotch - RPG制作・実行ツール
 
-このプロジェクトはClaude Code Agentによって作成されました。
+このプロジェクトはname-nameリポジトリをベースに、ノベルゲームからRPGに変更したものです。
 
-## プロジェクト構成
+## プロジェクト概要
 
-- **フレームワーク**: React + Vite + TypeScript
-- **ゲームエンジン**: Phaser 3
-- **スタイリング**: Tailwind CSS
-- **コード品質**: ESLint, Prettier, Husky, lint-staged
-- **デプロイ**: GitHub Pages（GitHub Actions）
+**Mocotch**: ドラクエ風RPGの制作・実行ツール
 
-## 主要ファイル
+- エディットモード: マップ、NPC、プレイヤー、アセットを編集するビジュアルエディタ
+- プレイモード: Phaserでゲーム実行
+- Git管理: ゲームデータとアセットをGitで自動バージョン管理
+- プロジェクト管理: 各RPGゲームは独立したGitリポジトリとして管理
+- データ駆動設計: MainSceneはgame.jsonから動的にゲームを構築
 
-- `src/App.tsx` - メインアプリケーション
-- `src/components/PhaserGame.tsx` - Phaserゲームコンポーネント
-- `src/game/MainScene.ts` - ゲームのメインシーン
-- `src/game/config.ts` - Phaser設定
-- `.github/workflows/deploy.yml` - GitHub Pagesデプロイワークフロー
+## プロジェクト構造（モノレポ）
 
-## ゲームの内容
+```
+mocotch/
+├── src/                    # フロントエンド (React + Vite + TypeScript)
+│   ├── components/        # UIコンポーネント
+│   │   ├── PhaserGame.tsx          # Phaserゲームコンポーネント
+│   │   ├── SaveDiscardButtons.tsx  # セーブ/破棄ボタン
+│   │   ├── MapEditor.tsx           # マップエディタ（タイル配置）
+│   │   └── NPCEditor.tsx           # NPCエディタ（NPC配置・設定）
+│   ├── screens/           # 画面コンポーネント
+│   │   ├── ProjectListScreen.tsx   # プロジェクト一覧
+│   │   ├── EditorScreen.tsx        # エディタ画面（Edit/Play切替）
+│   │   └── AssetsScreen.tsx        # アセット管理画面
+│   ├── game/              # Phaserゲーム
+│   │   ├── MainScene.ts        # ゲームメインシーン
+│   │   └── config.ts           # Phaser設定
+│   ├── types.ts           # TypeScript型定義
+│   ├── App.tsx            # メインアプリ
+│   └── main.tsx           # エントリーポイント
+├── backend/               # バックエンド (FastAPI + Python)
+│   ├── app/
+│   │   ├── main.py             # APIエンドポイント
+│   │   ├── models.py           # Pydanticモデル
+│   │   ├── git_service.py      # Git操作
+│   │   └── rpg_service.py      # RPGデータ管理
+│   ├── templates/              # ゲームプロジェクトテンプレート
+│   │   ├── game-project-README.md  # README テンプレート
+│   │   └── game-project-gitignore  # .gitignore テンプレート
+│   ├── projects/               # ゲームプロジェクト（gitignore対象）
+│   │   └── {game-name}/        # 各ゲームのリポジトリ
+│   ├── pyproject.toml          # uv用依存関係
+│   └── .gitignore
+├── compose.yaml           # Docker Compose設定
+├── package.json           # フロントエンド依存関係
+└── CLAUDE.md              # このファイル
+```
 
-ドラクエ風のトップダウンRPGです：
+## 技術スタック
 
-### 操作方法
+### フロントエンド
+- React 18 + TypeScript
+- Vite
+- React Router DOM
+- Tailwind CSS
+- Phaser 3
+
+### バックエンド
+- FastAPI (Python)
+- GitPython
+- Pydantic
+
+### インフラ
+- Docker Compose
+
+## 重要な設計原則
+
+### 1. ツールとゲームデータの分離
+- **Mocotchツール**: このリポジトリ
+- **ゲームプロジェクト**: 別リポジトリ（例: my-rpg-game）
+- 各ゲームは`backend/projects/`にクローンされる（gitignore対象）
+
+### 2. Windowsでも動作する
+- シンボリックリンクは使わない
+- API経由でリポジトリをクローン・管理
+- パスはOS依存しない形で扱う
+
+### 3. ブランチ戦略
+- **develop**: 開発・編集用（デフォルト）
+- **main**: 本番公開用
+- ローカル環境はdevelopブランチ
+- 本番環境はmainブランチを参照（予定）
+
+## 開発環境のセットアップ
+
+### フロントエンド (React + Vite)
+
+```bash
+# 依存関係インストール
+npm install
+
+# 開発サーバー起動
+npm run dev
+# → http://localhost:5173
+```
+
+### バックエンド (FastAPI + Python)
+
+```bash
+cd backend
+
+# 仮想環境作成と依存関係インストール
+uv venv
+uv sync
+
+# サーバー起動
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# → http://localhost:8000
+```
+
+### Docker Compose（推奨）
+
+```bash
+# ルートディレクトリで
+docker compose up
+```
+
+フロントエンドとバックエンドが同時に起動します。
+
+## ゲームプロジェクトの管理
+
+### 新規ゲームの作成
+
+```bash
+# APIで初期化（フロントエンドのUIから作成可能）
+curl -X POST http://localhost:8000/api/projects/init \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-rpg-game", "branch": "develop"}'
+```
+
+これで以下が自動生成されます：
+- Git リポジトリ（developブランチ）
+- game.json（ゲームデータ）
+- .mocotch.json（メタデータ、gitignore対象）
+- .gitignore（.mocotch.jsonを除外）
+- README.md（プロジェクト説明とゲームデータフォーマット）
+- assets/images/（画像フォルダ）
+- assets/sounds/（音声フォルダ）
+- assets/movies/（動画フォルダ）
+
+### 既存ゲームのクローン
+
+```bash
+# APIでクローン
+curl -X POST http://localhost:8000/api/projects/clone \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-rpg-game",
+    "repo_url": "https://github.com/user/my-rpg-game.git",
+    "branch": "develop"
+  }'
+```
+
+**重要**:
+- 手動で`git clone`しない
+- 必ずAPI経由でクローン（Windows互換性のため）
+- クローンされたプロジェクトは`backend/projects/`に配置
+
+## ゲームプロジェクトの構造
+
+各ゲームリポジトリは以下の構造を持ちます：
+
+```
+my-rpg-game/
+├── .git/
+├── .gitignore          # .mocotch.jsonを除外
+├── .mocotch.json       # ローカル設定（ブランチ情報、gitignore対象）
+├── README.md           # プロジェクト説明（自動生成）
+├── game.json           # ゲームデータ（マップ、NPC、プレイヤー）
+└── assets/
+    ├── images/         # 画像ファイル
+    ├── sounds/         # 音声ファイル
+    └── movies/         # 動画ファイル
+```
+
+### ゲームデータフォーマット (game.json)
+
+```json
+{
+  "name": "my-rpg-game",
+  "version": "1.0.0",
+  "map": {
+    "width": 25,
+    "height": 19,
+    "tile_size": 32,
+    "tiles": [[0, 1, 2, ...], ...]
+  },
+  "player": {
+    "x": 5,
+    "y": 5,
+    "direction": "down"
+  },
+  "npcs": [
+    {
+      "id": "npc1",
+      "name": "村人1",
+      "x": 4,
+      "y": 3,
+      "message": "こんにちは！",
+      "color": 16743275
+    }
+  ],
+  "events": []
+}
+```
+
+**タイルタイプ**:
+- 0: 草地（通行可能）
+- 1: 道（通行可能）
+- 2: 木（通行不可）
+- 3: 水（通行不可）
+
+## モード切り替え
+
+### エディットモード
+
+エディット画面ではタブで以下を切り替えて編集：
+
+1. **マップ** - タイル配置エディタ
+   - タイルパレット（草地、道、木、水）
+   - クリック/ドラッグで描画
+   - ビジュアルマップエディタ
+
+2. **NPC** - NPC配置・設定エディタ
+   - NPCリスト管理
+   - マップ上での配置（クリックで配置）
+   - 名前、メッセージ、色の設定
+
+3. **プレイヤー** - プレイヤー初期設定
+   - 初期位置（X, Y座標）
+   - 初期方向（上下左右）
+
+4. **アセット →** - アセット管理画面へ遷移
+   - 画像、音声、動画のアップロード/削除
+   - ファイルプレビュー
+   - 検索機能
+
+### プレイモード
+- Phaserでゲーム実行
+- game.jsonから動的に読み込み
+- ドラクエ風の操作感
+
+右下の「▶️」ボタンでプレイモードに切り替え。
+
+## 保存の仕組み
+
+### 自動保存（ワーキングディレクトリ）
+- ゲームデータの変更は1秒後に自動保存
+- ワーキングディレクトリに書き込まれるのみ（コミットはしない）
+- セーブボタンが青く表示される（未コミットの変更あり）
+
+### 手動コミット（セーブボタン）
+- セーブボタンを押すとGitコミット・プッシュ
+- コミット成功後、セーブボタンの青色が消える
+
+## API エンドポイント一覧
+
+### プロジェクト管理
+- `GET /api/projects` - プロジェクト一覧
+- `POST /api/projects/init` - 新規作成
+- `POST /api/projects/clone` - クローン
+- `POST /api/projects/{name}/sync` - 同期
+
+### RPGデータ
+- `GET /api/projects/{name}/data` - ゲームデータ取得
+- `PUT /api/projects/{name}/data` - ゲームデータ保存
+
+### アセット管理
+- `GET /api/projects/{name}/assets/{type}` - 一覧（type: images/sounds/movies）
+- `POST /api/projects/{name}/assets/{type}` - アップロード
+- `GET /api/projects/{name}/assets/{type}/{filename}` - ダウンロード
+- `DELETE /api/projects/{name}/assets/{type}/{filename}` - 削除
+
+### コミット・同期
+- `GET /api/projects/{name}/status` - 未コミットの変更確認
+- `POST /api/projects/{name}/commit` - コミット・プッシュ
+- `POST /api/projects/{name}/discard` - 変更破棄
+- `POST /api/projects/{name}/switch-branch` - ブランチ切替
+
+## よく使うコマンド
+
+### 開発
+
+```bash
+# フロントエンド
+npm run dev
+
+# バックエンド
+cd backend
+uv run uvicorn app.main:app --reload --port 8000
+
+# Docker Compose
+docker compose up
+```
+
+### ビルド
+
+```bash
+# フロントエンド
+npm run build
+npm run preview
+```
+
+### コード品質
+
+```bash
+# Lint
+npm run lint
+
+# Format
+npm run format
+```
+
+## 現在の実装状況
+
+### 完了 ✅
+- ✅ バックエンドAPI実装完了
+- ✅ プロジェクト管理機能（初期化、クローン、同期）
+- ✅ RPGデータ管理機能（CRUD操作）
+- ✅ アセット管理機能（アップロード、ダウンロード、削除）
+- ✅ Git統合機能（自動保存、コミット、プッシュ、破棄）
+- ✅ フロントエンドとバックエンドの統合
+- ✅ プロジェクト一覧画面
+- ✅ エディタ画面（Edit/Playモード切り替え）
+- ✅ **マップエディタ**（タイル配置UI、ドラッグ描画）
+- ✅ **NPCエディタ**（NPC配置・設定UI）
+- ✅ **プレイヤー設定UI**（初期位置・方向）
+- ✅ **アセット管理画面**（画像/音声/動画、プレビュー、検索）
+- ✅ **MainSceneデータ駆動化**（game.jsonから動的に読み込み）
+- ✅ **ゲームプロジェクトテンプレート**（README.md、.gitignore）
+- ✅ プレイモード（Phaserゲーム実行）
+- ✅ ダークモード対応
+- ✅ Docker Compose設定
+
+### 未実装（今後の予定）
+- ⬜ イベント設定UI（マップイベント、トリガー設定）
+- ⬜ タグ機能（アセット分類）
+- ⬜ マップレイヤー機能（地形レイヤー、オブジェクトレイヤー）
+- ⬜ 本番環境へのデプロイ設定
+- ⬜ カスタムタイル画像のサポート
+- ⬜ 音声・動画のゲーム内再生機能
+
+## ゲームの操作方法
+
+### プレイモード
 
 - **スマホ/タブレット**: タップした場所まで自動で移動、NPCをタップすると自動で近づいて会話
 - **PC**: 矢印キーで4方向に移動、スペースキーでNPCと会話（クリック操作も可能）
@@ -30,6 +354,45 @@
 ### 特徴
 
 - テキストは画面下部のウインドウに1文字ずつ表示（ドラクエ風）
-- マップには草地、道、木、池が配置
-- 4人のNPCと会話できる
 - BFS（幅優先探索）による経路探索で障害物を自動で回避
+- マップには草地、道、木、池が配置
+- NPCと会話できる
+
+## 開発時の注意点
+
+1. **シンボリックリンクは使わない** - Windows互換性のため
+2. **API経由でプロジェクト管理** - 手動のgit操作は避ける
+3. **ブランチを意識** - develop（開発）/ main（本番）
+4. **projects/はgitignore対象** - 各ゲームは独立したリポジトリ
+5. **uvを使う** - Python依存関係管理
+
+## トラブルシューティング
+
+### ポート8000が使用中
+```bash
+# プロセスを確認
+lsof -i :8000
+
+# または別のポートを使用
+uv run uvicorn app.main:app --reload --port 8001
+```
+
+### プロジェクトのクローンに失敗
+- `backend/projects/{name}`が既に存在している可能性
+- 手動で削除してから再クローン
+```bash
+rm -rf backend/projects/{name}
+```
+
+### バックエンドの依存関係エラー
+```bash
+cd backend
+rm -rf .venv
+uv venv
+uv sync
+```
+
+## 参考ドキュメント
+
+- `backend/README.md` - バックエンドAPI詳細
+- [name-name リポジトリ](https://github.com/kako-jun/name-name) - ベースとなったノベルゲームツール
