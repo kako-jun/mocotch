@@ -8,14 +8,15 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Phaser Game with React + Vite + TypeScript</h1>
+        <h1>ドラクエ風RPG - React + Vite + TypeScript</h1>
       </header>
 
       <main>
         {!gameStarted ? (
           <div className="start-screen">
-            <p>シンプルなPhaserゲームのデモです</p>
-            <button onClick={() => setGameStarted(true)}>ゲームを開始</button>
+            <p>懐かしいドラクエ風のRPGゲームです</p>
+            <p>矢印キーで移動、スペースキーで話しかけます</p>
+            <button onClick={() => setGameStarted(true)}>冒険を始める</button>
           </div>
         ) : (
           <PhaserGame />

@@ -1,6 +1,8 @@
 # mocotch
 
-React + Vite + TypeScriptで作成したシンプルなPhaserゲーム
+React + Vite + TypeScriptで作成したドラクエ風RPGゲーム
+
+懐かしいドラクエのような、トップダウンビューのRPGです。
 
 ## 技術スタック
 
