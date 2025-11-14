@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useParams,
+} from 'react-router-dom'
 import ProjectListScreen from './screens/ProjectListScreen'
 import EditorScreen from './screens/EditorScreen'
 import AssetsScreen from './screens/AssetsScreen'
@@ -13,7 +19,7 @@ function App() {
 
   const [showSettings, setShowSettings] = useState(false)
   const [apiBaseUrl, setApiBaseUrl] = useState(() => {
-    return localStorage.getItem('apiBaseUrl') || 'http://localhost:8000'
+    return localStorage.getItem('apiBaseUrl') || 'http://localhost:6565'
   })
 
   useEffect(() => {
@@ -64,32 +70,38 @@ function App() {
 
       {/* 設定モーダル */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50">
           <div
-            className={`p-6 rounded-lg shadow-xl max-w-md w-full ${
+            className={`w-full max-w-md rounded-lg p-6 shadow-xl ${
               isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
             }`}
           >
-            <h2 className="text-xl font-bold mb-4">設定</h2>
+            <h2 className="mb-4 text-xl font-bold">設定</h2>
             <div className="space-y-4">
               <div>
-                <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <label
+                  className={`mb-1 block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                >
                   API URL
                 </label>
                 <input
                   type="text"
                   value={apiBaseUrl}
                   onChange={e => setApiBaseUrl(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded ${
-                    isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+                  className={`w-full rounded border px-3 py-2 ${
+                    isDark
+                      ? 'border-gray-600 bg-gray-700 text-white'
+                      : 'border-gray-300 bg-white text-gray-900'
                   }`}
-                  placeholder="http://localhost:8000"
+                  placeholder="http://localhost:6565"
                 />
               </div>
               <button
                 onClick={() => setShowSettings(false)}
-                className={`w-full py-2 px-4 rounded font-medium ${
-                  isDark ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'
+                className={`w-full rounded px-4 py-2 font-medium ${
+                  isDark
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
                 }`}
               >
                 閉じる
@@ -144,14 +156,16 @@ function EditorScreenWrapper({
   const { projectName } = useParams<{ projectName: string }>()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    if (projectName) {
+      document.title = `${projectName} - Mocotch`
+    }
+  }, [projectName])
+
   if (!projectName) {
     navigate('/')
     return null
   }
-
-  useEffect(() => {
-    document.title = `${projectName} - Mocotch`
-  }, [projectName])
 
   const handleBack = () => {
     navigate('/')
@@ -183,14 +197,16 @@ function AssetsScreenWrapper({
   const { projectName } = useParams<{ projectName: string }>()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    if (projectName) {
+      document.title = `${projectName} - アセット管理 - Mocotch`
+    }
+  }, [projectName])
+
   if (!projectName) {
     navigate('/')
     return null
   }
-
-  useEffect(() => {
-    document.title = `${projectName} - アセット管理 - Mocotch`
-  }, [projectName])
 
   const handleBack = () => {
     navigate(`/${projectName}`)
