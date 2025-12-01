@@ -29,3 +29,5 @@ backend/.venv/
 backend/__pycache__/
 backend/**/__pycache__/
 backend/**/*.pyc
+.claude/settings.local.json
+.serena/
