@@ -31,3 +31,4 @@ backend/**/__pycache__/
 backend/**/*.pyc
 .claude/settings.local.json
 .serena/
+.mcp.json
